@@ -1,0 +1,107 @@
+---
+title: "KHN Data"
+output: html_notebook
+---
+
+Run packages
+```{r}
+#install.packages("tidyverse")
+library("tidyverse")
+#install.packages("rio")
+library("rio")
+#install.packages("pacman")
+library("pacman")
+#install.packages("rmarkdown")
+library("rmarkdown")
+```
+
+Upload data and create a dataframe called khn
+```{r}
+download.file("https://raw.githubusercontent.com/khnews/2020-underfunded-under-threat-data/master/data/05-local-health-departments-detail.csv", "05-local-health-departments-detail.csv")
+khn <- rio::import("data/05-local-health-departments-detail.csv")
+
+```
+
+Create a new df called nc that filters just for nc
+```{r}
+nc <- khn %>%
+  filter(state_code == "NC")
+```
+
+It looks like some single counties may have been incorporated into a multi county system after '99. This was the case with Polk. I imagine that this is the case for counties that show "1" in the total count
+```{r}
+single_counties <- nc %>%  
+  filter(lhd_area_type == "single county") %>%  
+ group_by(lhd_name) %>%
+  summarise(
+    Total = n()
+  )
+
+filter(single_counties, Total == "1")
+```
+
+What are the multi counties?
+```{r}
+multi_counties <- nc %>%  
+  filter(lhd_area_type == "multi-county") %>%  
+ group_by(lhd_name) %>%
+  summarise(
+    Total = n()
+  )
+```
+I did this code below without accounting for the multi-county systems
+
+What is the average number of full time employees for each county in NC from 1999-2017? 
+```{r}
+nc_fte <- nc %>%
+  filter(state_code == "NC", !is.na(fte)) %>%
+  group_by(lhd_name) %>%
+  summarise(
+    AverageFte = mean(fte)
+    ) %>%
+  select(lhd_name, AverageFte) %>%
+  arrange(AverageFte)
+```
+What was the average fte for each county in 2017? 
+```{r}
+nc_fte_2017 <- nc %>%
+  filter(year == "2017", !is.na(fte)) %>%
+  group_by(lhd_name) %>%
+  summarise(
+    AverageFte = mean(fte)
+    ) %>%
+  select(lhd_name, AverageFte) %>%
+  arrange(AverageFte)
+```
+The average of those averages above? How does it compare to the highest fte from the previous code? Lowest?
+```{r}
+nc_fte_2017 %>%
+  mutate(
+    Avg = mean(AverageFte)
+  ) %>%
+  select(Avg)
+
+nc %>%
+  filter(year == "2017", !is.na(fte)) %>%
+  group_by(lhd_name) %>%
+  summarise(
+    AverageFte = mean(fte)
+    ) %>%
+  select(lhd_name, AverageFte) %>%
+  arrange(desc(AverageFte))
+
+#97.8 vs 825 (Mecklenburg)
+
+nc %>%
+  filter(year == "2017", !is.na(fte)) %>%
+  group_by(lhd_name) %>%
+  summarise(
+    AverageFte = mean(fte)
+    ) %>%
+  select(lhd_name, AverageFte) %>%
+  arrange(AverageFte)
+
+#97.8 vs 14 (Hyde)
+```
+
+
